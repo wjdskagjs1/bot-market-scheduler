@@ -1,0 +1,25 @@
+{
+  "name": "bot-market-scheduler",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "nodemon index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wjdskagjs1/bot-market-scheduler.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/wjdskagjs1/bot-market-scheduler/issues"
+  },
+  "homepage": "https://github.com/wjdskagjs1/bot-market-scheduler#readme",
+  "dependencies": {
+    "@bootpay/server-rest-client": "^1.0.3",
+    "axios": "^0.21.1",
+    "mongoose": "^5.11.10"
+  }
+}

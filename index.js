@@ -86,17 +86,16 @@ const task = ()=>{
         bootpay_private_key
     );
 
-    RestClient.getAccessToken().then(function (response) {
-        if (response.status === 200) {
-            const { token } = response.data;
+    if(now.getDate() === billing_day){
+        RestClient.getAccessToken().then(function (response) {
+            if (response.status === 200) {
+                const { token } = response.data;
+                User.find({enable: true},(err, userList)=>{
 
-            User.find({enable: true},(err, userList)=>{
-
-                userList.forEach((data)=>{
-                    const { billing_info, bot_id, userid, guild_id, end_date } = data;
-                    const order_id = `${bot_id}-${userid}-${now.yyyymmdd()}`;
-
-                    if(now >= end_date){
+                    userList.forEach((data)=>{
+                        const { billing_info, bot_id, userid, guild_id, end_date } = data;
+                        const order_id = `${bot_id}-${userid}-${now.yyyymmdd()}`;
+    
                         Receipt.findOne({order_id: order_id}, (err, data)=>{
                             if(err){
                                 console.log(err);
@@ -160,11 +159,11 @@ const task = ()=>{
                                 }
                             }
                         });
-                    }
+                    });
                 });
-            });
-        }
-    }).catch(console.error);
+            }
+        }).catch(console.error);
+    }
 
     User.find({trial:true, enable: false},(err, data)=>{ 
         data.forEach((element)=>{

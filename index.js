@@ -2,7 +2,7 @@ const {
     mongouri,
     rest_application_ID,
     bootpay_private_key
- } = require('./config.json');
+ } = process.env; //require('./config.json');
 const RestClient = require('@bootpay/server-rest-client').RestClient;
 const axios = require('axios');
 
@@ -39,6 +39,17 @@ const user = mongoose.Schema({
 
 // 7. 정의된 스키마를 객체처럼 사용할 수 있도록 model() 함수로 컴파일
 const User = mongoose.model('user', user);
+
+const receipt = mongoose.Schema({
+    order_id: String,
+    bot_id: String,
+    userid: String,
+    guild_id: String,
+    date: Date
+});
+
+const Receipt = mongoose.model('receipt', receipt);
+
 const billing_day = 1;
 
 Date.prototype.yyyymmdd = function() {
@@ -71,7 +82,7 @@ const task = ()=>{
         bootpay_private_key
     );
 
-    if(true || now.getDate() === billing_day){
+    if(now.getDate() === billing_day){
 
         RestClient.getAccessToken().then(function (response) {
             if (response.status === 200) {
@@ -80,42 +91,61 @@ const task = ()=>{
                 User.find({enable: true},(err, userList)=>{
 
                     userList.forEach((data)=>{
-                        const { billing_info, bot_id, userid } = data;
-                        const order_id = `${bot_id}-${userid}-${now.yyyymmddhhmmss()}`;
+                        const { billing_info, bot_id, userid, guild_id } = data;
+                        const order_id = `${bot_id}-${userid}-${now.yyyymmdd()}`;
 
-                        RestClient.requestSubscribeBillingPayment({
-                            billingKey: billing_info[0], // 빌링키
-                            itemName: billing_info[1], // 정기결제 아이템명
-                            price: parseInt(billing_info[3]), // 결제 금액
-                            orderId: order_id, // 유니크한 주문번호
-                        }).then(function (res) {
-                            if (res.status === 200) {
-                                const { status } = res.data;
-                                const enable = (status === 1);
-                                User.updateOne(data, { $set: { enable: enable } },(err, resultData)=>{
-                                    if(err){
-                                        console.log(err);
-                                    }else{
-                                        console.log(resultData);
-                                    }
-                                });
+                        Receipt.findOne({order_id: order_id}, (err, data)=>{
+                            if(err){
+                                console.log(err);
                             }else{
-                                User.updateOne(data, { $set: { enable: false } },(err, resultData)=>{
-                                    if(err){
-                                        console.log(err);
-                                    }else{
-                                        console.log(resultData);
-                                    }
-                                });
-                            }
-                        }).catch((reason)=>{
-                            User.updateOne(data, { $set: { enable: false } },(err, resultData)=>{
-                                if(err){
-                                    console.log(err);
-                                }else{
-                                    console.log(resultData);
+                                if(data === null){
+                                    RestClient.requestSubscribeBillingPayment({
+                                        billingKey: billing_info[0], // 빌링키
+                                        itemName: billing_info[1], // 정기결제 아이템명
+                                        price: parseInt(billing_info[3]), // 결제 금액
+                                        orderId: order_id, // 유니크한 주문번호
+                                    }).then(function (res) {
+                                        if (res.status === 200) {
+                                            const { status } = res.data;
+                                            const enable = (status === 1);
+                                            const newReceipt = new Receipt({
+                                                order_id: order_id,
+                                                bot_id: bot_id,
+                                                userid: userid,
+                                                guild_id: guild_id
+                                            });
+                                            newReceipt.save(function(error, data){
+                                                if(error){
+                                                    console.log(error);
+                                                }else{
+                                                    User.updateOne(data, { $set: { enable: enable } },(err, resultData)=>{
+                                                        if(err){
+                                                            console.log(err);
+                                                        }else{
+                                                            console.log(resultData);
+                                                        }
+                                                    });
+                                                }});
+                                        }else{
+                                            User.updateOne(data, { $set: { enable: false } },(err, resultData)=>{
+                                                if(err){
+                                                    console.log(err);
+                                                }else{
+                                                    console.log(resultData);
+                                                }
+                                            });
+                                        }
+                                    }).catch((reason)=>{
+                                        User.updateOne(data, { $set: { enable: false } },(err, resultData)=>{
+                                            if(err){
+                                                console.log(err);
+                                            }else{
+                                                console.log(resultData);
+                                            }
+                                        });
+                                    });
                                 }
-                            });
+                            }
                         });
                     });
                 });
@@ -138,3 +168,4 @@ const task = ()=>{
     });
 }
 task();
+process.exit();

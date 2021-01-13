@@ -120,23 +120,13 @@ const task = ()=>{
                                                 if(error){
                                                     console.log(error);
                                                 }else{
-                                                    if(enable){
-                                                        User.updateOne(data, { $set: { enable: enable, end_date: now.next() } },(err, resultData)=>{
-                                                            if(err){
-                                                                console.log(err);
-                                                            }else{
-                                                                console.log(resultData);
-                                                            }
-                                                        });
-                                                    }else{
-                                                        User.updateOne(data, { $set: { enable: enable } },(err, resultData)=>{
-                                                            if(err){
-                                                                console.log(err);
-                                                            }else{
-                                                                console.log(resultData);
-                                                            }
-                                                        });
-                                                    }
+                                                    User.updateOne(data, { $set: { enable: enable } },(err, resultData)=>{
+                                                        if(err){
+                                                            console.log(err);
+                                                        }else{
+                                                            console.log(resultData);
+                                                        }
+                                                    });
                                                 }});
                                         }else{
                                             User.updateOne(data, { $set: { enable: false } },(err, resultData)=>{

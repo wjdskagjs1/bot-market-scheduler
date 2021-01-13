@@ -73,7 +73,11 @@ Date.prototype.hhmmss = function() {
 };
 Date.prototype.yyyymmddhhmmss = function() {
     return this.yyyymmdd() + this.hhmmss();
-};  
+};
+Date.prototype.next = function() {
+    const mm = this.getMonth() + 1;
+    return new Date(this.getFullYear(), mm+1, 1);
+};
 
 const task = ()=>{
     const now = new Date();
@@ -82,18 +86,17 @@ const task = ()=>{
         bootpay_private_key
     );
 
-    if(now.getDate() === billing_day){
+    RestClient.getAccessToken().then(function (response) {
+        if (response.status === 200) {
+            const { token } = response.data;
 
-        RestClient.getAccessToken().then(function (response) {
-            if (response.status === 200) {
-                const { token } = response.data;
+            User.find({enable: true},(err, userList)=>{
 
-                User.find({enable: true},(err, userList)=>{
+                userList.forEach((data)=>{
+                    const { billing_info, bot_id, userid, guild_id, end_date } = data;
+                    const order_id = `${bot_id}-${userid}-${now.yyyymmdd()}`;
 
-                    userList.forEach((data)=>{
-                        const { billing_info, bot_id, userid, guild_id } = data;
-                        const order_id = `${bot_id}-${userid}-${now.yyyymmdd()}`;
-
+                    if(now >= end_date){
                         Receipt.findOne({order_id: order_id}, (err, data)=>{
                             if(err){
                                 console.log(err);
@@ -119,13 +122,23 @@ const task = ()=>{
                                                 if(error){
                                                     console.log(error);
                                                 }else{
-                                                    User.updateOne(data, { $set: { enable: enable } },(err, resultData)=>{
-                                                        if(err){
-                                                            console.log(err);
-                                                        }else{
-                                                            console.log(resultData);
-                                                        }
-                                                    });
+                                                    if(enable){
+                                                        User.updateOne(data, { $set: { enable: enable, end_date: now.next() } },(err, resultData)=>{
+                                                            if(err){
+                                                                console.log(err);
+                                                            }else{
+                                                                console.log(resultData);
+                                                            }
+                                                        });
+                                                    }else{
+                                                        User.updateOne(data, { $set: { enable: enable } },(err, resultData)=>{
+                                                            if(err){
+                                                                console.log(err);
+                                                            }else{
+                                                                console.log(resultData);
+                                                            }
+                                                        });
+                                                    }
                                                 }});
                                         }else{
                                             User.updateOne(data, { $set: { enable: false } },(err, resultData)=>{
@@ -148,16 +161,16 @@ const task = ()=>{
                                 }
                             }
                         });
-                    });
+                    }
                 });
-            }
-        }).catch(console.error);
-    }
+            });
+        }
+    }).catch(console.error);
 
     User.find({trial:true, enable: false},(err, data)=>{ 
         data.forEach((element)=>{
             if(now > element['end_date']){
-                User.updateOne(data, { $set: { channels: channels } },(err, resultData)=>{
+                User.updateOne(data, { $set: { trial: false } },(err, resultData)=>{
                     if(err){
                         console.log(err);
                     }else{

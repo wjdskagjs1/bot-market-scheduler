@@ -115,8 +115,7 @@ const task = ()=>{
                                                 order_id: order_id,
                                                 bot_id: bot_id,
                                                 userid: userid,
-                                                guild_id: guild_id,
-                                                date: now
+                                                guild_id: guild_id
                                             });
                                             newReceipt.save(function(error, data){
                                                 if(error){

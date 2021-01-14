@@ -2,7 +2,7 @@ const {
     mongouri,
     rest_application_ID,
     bootpay_private_key
- } = process.env; // require('./config.json');
+ } = process.env; //require('./config.json');
 const RestClient = require('@bootpay/server-rest-client').RestClient;
 const axios = require('axios');
 
@@ -50,8 +50,6 @@ const receipt = mongoose.Schema({
 
 const Receipt = mongoose.model('receipt', receipt);
 
-const billing_day = 1;
-
 Date.prototype.yyyymmdd = function() {
     var mm = this.getMonth() + 1;
     var dd = this.getDate();
@@ -80,14 +78,14 @@ Date.prototype.addDays = function(days) {
     return date;
 }
 
-const task = ()=>{
+const task = async ()=>{
     const now = new Date();
     RestClient.setConfig(
         rest_application_ID,
         bootpay_private_key
     );
 
-    RestClient.getAccessToken().then(function (response) {
+    await RestClient.getAccessToken().then(function (response) {
         if (response.status === 200) {
             const { token } = response.data;
             User.find({enable: true},(err, userList)=>{
@@ -115,14 +113,19 @@ const task = ()=>{
                                                 order_id: order_id,
                                                 bot_id: bot_id,
                                                 userid: userid,
-                                                guild_id: guild_id
+                                                guild_id: guild_id,
+                                                date: now
                                             });
                                             newReceipt.save(function(error, data){
                                                 if(error){
                                                     console.log(error);
                                                 }else{
                                                     if(enable){
-                                                        User.updateOne(data, { $set: { enable: enable, end_date: end_date.addDays(30)} },(err, resultData)=>{
+                                                        User.updateOne({
+                                                            bot_id: bot_id,
+                                                            userid: userid,
+                                                            guild_id: guild_id
+                                                        }, { $set: { enable: enable, end_date: end_date.addDays(30)} },(err, resultData)=>{
                                                             if(err){
                                                                 console.log(err);
                                                             }else{
@@ -130,7 +133,11 @@ const task = ()=>{
                                                             }
                                                         });
                                                     }else{
-                                                        User.updateOne(data, { $set: { enable: enable } },(err, resultData)=>{
+                                                        User.updateOne({
+                                                            bot_id: bot_id,
+                                                            userid: userid,
+                                                            guild_id: guild_id
+                                                        }, { $set: { enable: enable } },(err, resultData)=>{
                                                             if(err){
                                                                 console.log(err);
                                                             }else{
@@ -140,7 +147,11 @@ const task = ()=>{
                                                     }
                                                 }});
                                         }else{
-                                            User.updateOne(data, { $set: { enable: false } },(err, resultData)=>{
+                                            User.updateOne({
+                                                bot_id: bot_id,
+                                                userid: userid,
+                                                guild_id: guild_id
+                                            }, { $set: { enable: false } },(err, resultData)=>{
                                                 if(err){
                                                     console.log(err);
                                                 }else{
@@ -149,7 +160,11 @@ const task = ()=>{
                                             });
                                         }
                                     }).catch((reason)=>{
-                                        User.updateOne(data, { $set: { enable: false } },(err, resultData)=>{
+                                        User.updateOne({
+                                            bot_id: bot_id,
+                                            userid: userid,
+                                            guild_id: guild_id
+                                        }, { $set: { enable: false } },(err, resultData)=>{
                                             if(err){
                                                 console.log(err);
                                             }else{
@@ -166,10 +181,20 @@ const task = ()=>{
         }
     }).catch(console.error);
 
-    User.find({trial:true, enable: false},(err, data)=>{ 
+    await User.find({trial:true, enable: false},(err, data)=>{ 
         data.forEach((element)=>{
-            if(now > element['end_date']){
-                User.updateOne(data, { $set: { trial: false } },(err, resultData)=>{
+            const {
+                bot_id,
+                userid,
+                guild_id,
+                end_date
+            } = element;
+            if(now > end_date){
+                User.updateOne({
+                    bot_id: bot_id,
+                    userid: userid,
+                    guild_id: guild_id,
+                }, { $set: { trial: false } },(err, resultData)=>{
                     if(err){
                         console.log(err);
                     }else{
@@ -179,6 +204,8 @@ const task = ()=>{
             }
         });
     });
+    setTimeout(()=>{
+        process.exit();
+    }, 10000);
 }
 task();
-process.exit();

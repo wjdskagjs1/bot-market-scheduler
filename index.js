@@ -2,7 +2,7 @@ const {
     mongouri,
     rest_application_ID,
     bootpay_private_key
- } = process.env; //require('./config.json');
+ } = process.env; // require('./config.json');
 const RestClient = require('@bootpay/server-rest-client').RestClient;
 const axios = require('axios');
 
